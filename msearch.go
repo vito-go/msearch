@@ -50,6 +50,13 @@ func NewMsearch(file string, length int) (*Msearch, error) {
 	}, nil
 }
 
+// Get 查
+func (s *Msearch) Get(key string) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.gets(key)
+}
+
 // Add 增.
 func (s *Msearch) Add(key string, values ...string) error {
 	s.mu.Lock()
@@ -108,13 +115,6 @@ func (s *Msearch) dels(key string, values ...string) {
 		}
 		offset = d
 	}
-}
-
-// Get 查
-func (s *Msearch) Get(key string) []string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.gets(key)
 }
 
 func (s *Msearch) Update(key string, values ...string) error {
