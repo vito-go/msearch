@@ -57,34 +57,6 @@ func (s *Msearch) Add(key string, values ...string) error {
 	return s.adds(key, values...)
 }
 
-func (s *Msearch) adds(key string, values ...string) error {
-	if len(values) == 0 {
-		return nil
-	}
-	offset, ok := s.keyMap[key]
-	// 不存在
-	if !ok || offset == notExist {
-		_, err := s.add(nil, key, values...)
-		return err
-	}
-	// t 是否能插空 插空进入
-	// s.bytesAddr[offset:offset+8]
-	if len(values) == 1 {
-		value := values[0]
-		o, start, end, t := s.empty(offset)
-		if t && len(value) < (end-start) {
-			total := bigUint64(s.bytesAddr[offset : offset+8])
-			b := s.bytesAddr[o : o+total]
-			b[start] = byte(len(value))
-			copy(b[start+1:], value)
-			return nil
-		}
-	}
-	b8 := s.getB8byOffset(offset)
-	_, err := s.add(b8, key, values...)
-	return err
-}
-
 // Del 删.
 func (s *Msearch) Del(key string, values ...string) {
 	s.mu.Lock()
@@ -289,6 +261,33 @@ func (s *Msearch) add(b8 []byte, key string, values ...string) (int, error) {
 	}
 	s.offset += total
 	return total, err
+}
+func (s *Msearch) adds(key string, values ...string) error {
+	if len(values) == 0 {
+		return nil
+	}
+	offset, ok := s.keyMap[key]
+	// 不存在
+	if !ok || offset == notExist {
+		_, err := s.add(nil, key, values...)
+		return err
+	}
+	// t 是否能插空 插空进入
+	// s.bytesAddr[offset:offset+8]
+	if len(values) == 1 {
+		value := values[0]
+		o, start, end, t := s.empty(offset)
+		if t && len(value) < (end-start) {
+			total := bigUint64(s.bytesAddr[offset : offset+8])
+			b := s.bytesAddr[o : o+total]
+			b[start] = byte(len(value))
+			copy(b[start+1:], value)
+			return nil
+		}
+	}
+	b8 := s.getB8byOffset(offset)
+	_, err := s.add(b8, key, values...)
+	return err
 }
 
 func (s *Msearch) del(offset int, valueMap map[string]struct{}) int {

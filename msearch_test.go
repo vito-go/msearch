@@ -2,6 +2,7 @@ package msearch
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -23,22 +24,87 @@ func TestNewMsearch(t *testing.T) {
 	ms.Add(user, "aaa@163.com")
 	ms.Del(user, values[:len(values)-2]...)
 	ms.Del(user, values[:4]...)
-	ms.Add("1","111")
-	ms.Add("1","2222")
-	ms.Add("1","1")
-	ms.Add("1","11aaadsf")
-	ms.Add("2","222")
-	ms.Add("3","333")
+	ms.Add("1", "111")
+	ms.Add("1", "2222")
+	ms.Add("1", "1")
+	ms.Add("1", "11aaadsf")
+	ms.Add("2", "222")
+	ms.Add("3", "333")
 	a := ms.Get(user)
 	fmt.Println(a)
 
-	ms.DelByPrefix("1","11")
+	ms.DelByPrefix("1", "11")
 
-	fmt.Println("========",ms.Get(`1`),"------")
+	fmt.Println("========", ms.Get(`1`), "------")
 	fmt.Println("----")
 	fmt.Println(ms.Get(`2`))
 	fmt.Println(ms.Get(`3`))
 	fmt.Println(ms.Get(`3`))
 	// ms.Update("1","344")
+
+}
+
+func BenchmarkNewMsearch(b *testing.B) {
+	user := "example@example.com"
+	friends := []string{
+		// "abc429298@example.com", "abc429297@example.com", "abc429296@example.com", "abc429295@example.com", "abc429294@example.com",
+		// "abc429293@example.com", "abc429292@example.com", "abc429291@example.com", "abc429290@example.com", "abc429289@example.com",
+		// "abc429288@example.com", "abc429287@example.com", "abc429286@example.com", "abc429285@example.com", "abc429284@example.com",
+		// "abc429283@example.com", "abc429282@example.com", "abc429281@example.com", "abc429280@example.com", "abc429279@example.com",
+		// "abc429278@example.com", "abc429277@example.com", "abc429276@example.com", "abc429275@example.com", "abc429274@example.com",
+		"abc429273@example.com", "abc429272@example.com", "abc429271@example.com", "abc429270@example.com", "abc429269@example.com"}
+
+	fileName := "test.msearch"
+	ms, err := NewMsearch(fileName, DefaultLength)
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+	for i := 0; i < 10; i++ {
+		err := ms.Add(strconv.FormatInt(int64(i), 10), friends...)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	ms.Add(user, friends...)
+	for i := 0; i < b.N; i++ {
+		result:=ms.Get(user)
+		if len(result)!=len(friends){
+			b.Fatal("len(result)!=len(friends)",len(result),result,len(friends),friends)
+		}
+	}
+
+}
+func TestMsearch_Add(t *testing.T) {
+	user := "example@example.com"
+	friends := []string{
+		"abc429298@example.com", "abc429297@example.com", "abc429296@example.com", "abc429295@example.com", "abc429294@example.com",
+		"abc429293@example.com", "abc429292@example.com", "abc429291@example.com", "abc429290@example.com", "abc429289@example.com",
+		"abc429283@example.com", "abc429282@example.com", "abc429281@example.com", "abc429280@example.com", "abc429279@example.com",
+		"abc429278@example.com", "abc429277@example.com", "abc429276@example.com", "abc429275@example.com", "abc429274@example.com",
+		"abc429273@example.com", "abc429272@example.com", "abc429271@example.com", "abc429270@example.com", "abc429269@example.com"}
+	fileName := "test.msearch"
+	ms, err := NewMsearch(fileName, DefaultLength)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = ms.Add(user, friends...)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	for i := 0; i < 10; i++ {
+		err := ms.Add(strconv.FormatInt(int64(i), 10), strconv.FormatInt(int64(i), 10))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	fmt.Println(ms.Get("1")) // [1]
+	fmt.Println(ms.Get("2")) // [2]
+	ms.Del("1", "1")
+	fmt.Println(ms.Get("1")) // []
+	fmt.Println(ms.Get("2")) // [2]
+	fmt.Println(ms.Get("3")) // [3]
+	fmt.Println(ms.Get(user))
+	ms.Del(user, friends[2:]...) // 从第2个起全部删除
+	fmt.Println(ms.Get(user))    // [abc429298@example.com abc429297@example.com]
 
 }
