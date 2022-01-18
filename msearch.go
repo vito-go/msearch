@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"syscall"
 )
@@ -89,6 +90,31 @@ func (s *Msearch) Del(key string, values ...string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.dels(key, values...)
+}
+
+// DelByPrefix 根据前缀删除.
+func (s *Msearch) DelByPrefix(key string, values ...string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.delsPrefix(key, values...)
+}
+
+func (s *Msearch) delsPrefix(key string, values ...string) {
+	offset, ok := s.keyMap[key]
+	if !ok {
+		return
+	}
+
+	if len(values) == 0 {
+		return
+	}
+	for {
+		d := s.delPrefix(offset, values...)
+		if d == 0 {
+			break
+		}
+		offset = d
+	}
 }
 
 func (s *Msearch) dels(key string, values ...string) {
@@ -281,6 +307,30 @@ func (s *Msearch) del(offset int, valueMap map[string]struct{}) int {
 		if _, ok := valueMap[value]; ok {
 			copy(b[i+1:i+1+int(b[i])], make([]byte, int(b[i])))
 			b[i] = 0
+		}
+		i += bi + 1
+
+	}
+	return bigUint64(b[total-8 : total])
+}
+func (s *Msearch) delPrefix(offset int, values ...string) int {
+	total := bigUint64(s.bytesAddr[offset : offset+8])
+	if total == 0 {
+		return 0
+	}
+	b := s.bytesAddr[offset : offset+total]
+	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-16]); {
+		bi := int(b[i])
+		if bi == 0 {
+			i++
+			continue
+		}
+		value := string(b[i+1 : i+1+int(b[i])])
+		for _, v := range values {
+			if strings.HasPrefix(value, v) {
+				copy(b[i+1:i+1+int(b[i])], make([]byte, int(b[i])))
+				b[i] = 0
+			}
 		}
 		i += bi + 1
 
