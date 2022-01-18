@@ -23,6 +23,18 @@ func TestNewMsearch(t *testing.T) {
 	ms.Add(user, "aaa@163.com")
 	ms.Del(user, values[:len(values)-2]...)
 	ms.Del(user, values[:4]...)
+	ms.Add("1","111")
+	ms.Add("2","222")
+	ms.Add("3","333")
 	a := ms.Get(user)
 	fmt.Println(a)
+	ms.Update("1","qwerqwerqw")
+	ms.Update("11","dfadsf")
+
+	fmt.Println(ms.Get(`11`))
+	fmt.Println(ms.Get(`2`))
+	fmt.Println(ms.Get(`3`))
+	fmt.Println(ms.Get(`3`))
+	// ms.Update("1","344")
+
 }

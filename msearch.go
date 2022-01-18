@@ -53,6 +53,10 @@ func NewMsearch(file string, length int) (*Msearch, error) {
 func (s *Msearch) Add(key string, values ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.adds(key, values...)
+}
+
+func (s *Msearch) adds(key string, values ...string) error {
 	if len(values) == 0 {
 		return nil
 	}
@@ -69,7 +73,7 @@ func (s *Msearch) Add(key string, values ...string) error {
 		o, start, end, t := s.empty(offset)
 		if t && len(value) < (end-start) {
 			total := bigUint64(s.bytesAddr[offset : offset+8])
-			b := s.bytesAddr[offset+o : offset+o+total]
+			b := s.bytesAddr[o : o+total]
 			b[start] = byte(len(value))
 			copy(b[start+1:], value)
 			return nil
@@ -84,6 +88,10 @@ func (s *Msearch) Add(key string, values ...string) error {
 func (s *Msearch) Del(key string, values ...string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.dels(key, values...)
+}
+
+func (s *Msearch) dels(key string, values ...string) {
 	offset, ok := s.keyMap[key]
 	if !ok {
 		return
@@ -102,13 +110,25 @@ func (s *Msearch) Del(key string, values ...string) {
 		}
 		offset = d
 	}
-
 }
 
 // Get 查
 func (s *Msearch) Get(key string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	return s.gets(key)
+}
+
+func (s *Msearch) Update(key string, values ...string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	oldValues := s.gets(key)
+	s.dels(key, oldValues...)
+	err := s.adds(key, values...)
+	return err
+}
+
+func (s *Msearch) gets(key string) []string {
 	offset, ok := s.keyMap[key]
 	if !ok || offset == notExist {
 		return nil
@@ -126,7 +146,6 @@ func (s *Msearch) Get(key string) []string {
 	}
 	return lists
 }
-
 func (s *Msearch) Exist(key string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
