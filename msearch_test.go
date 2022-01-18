@@ -108,3 +108,10 @@ func TestMsearch_Add(t *testing.T) {
 	fmt.Println(ms.Get(user))    // [abc429298@example.com abc429297@example.com]
 
 }
+// goos: linux
+// goarch: amd64
+// pkg: github.com/vito-go/msearch
+// cpu: Intel(R) Core(TM) i7-2760QM CPU @ 2.40GHz
+// BenchmarkNewMsearch
+// BenchmarkNewMsearch-8   	 1209954	      1004 ns/op
+// PASS
