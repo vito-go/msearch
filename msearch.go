@@ -7,7 +7,6 @@ package msearch
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -50,21 +49,21 @@ func NewMsearch(file string, length int) (*Msearch, error) {
 	}, nil
 }
 
-// Get 查
+// Get 查询.
 func (s *Msearch) Get(key string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.gets(key)
 }
 
-// Add 增.
+// Add 增加.
 func (s *Msearch) Add(key string, values ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.adds(key, values...)
 }
 
-// Del 删.
+// Del 删除.
 func (s *Msearch) Del(key string, values ...string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -76,6 +75,16 @@ func (s *Msearch) DelByPrefix(key string, values ...string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.delsPrefix(key, values...)
+}
+
+// Update 更新。先删除所有老数据，然后更新新数据.
+func (s *Msearch) Update(key string, values ...string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	oldValues := s.gets(key)
+	s.dels(key, oldValues...)
+	err := s.adds(key, values...)
+	return err
 }
 
 func (s *Msearch) delsPrefix(key string, values ...string) {
@@ -115,15 +124,6 @@ func (s *Msearch) dels(key string, values ...string) {
 		}
 		offset = d
 	}
-}
-
-func (s *Msearch) Update(key string, values ...string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	oldValues := s.gets(key)
-	s.dels(key, oldValues...)
-	err := s.adds(key, values...)
-	return err
 }
 
 func (s *Msearch) gets(key string) []string {
@@ -168,7 +168,7 @@ func (s *Msearch) empty(offset int) (o int, start int, end int, t bool) {
 	return
 }
 
-// getB8byOffset 这个offset是每个value的起始offset 得到最后的一个8位 offset只能有s.keyMap 获得。
+// getB8byOffset 这个offset是每个value的起始offset 得到最后的一个8位 offset只能通过s.keyMap 获得。
 func (s *Msearch) getB8byOffset(offset int) (b8 []byte) {
 	var lastDec int
 	for {
@@ -181,7 +181,7 @@ func (s *Msearch) getB8byOffset(offset int) (b8 []byte) {
 	return
 }
 
-// 是否有空位，以及空位的长度
+// empty1 是否有空位，以及空位的长度.
 func (s *Msearch) empty1(offset int) (o int, lastDec int, start int, end int, t bool) {
 	// t为false的时候 也就是没有空位 有b8
 	var first bool
@@ -211,7 +211,6 @@ func (s *Msearch) empty1(offset int) (o int, lastDec int, start int, end int, t 
 	return
 }
 
-// 是否有空位，以及空位的长度
 func (s *Msearch) b8(offset int) (lastDec int, b8 []byte) {
 	// t为false的时候 也就是没有空位 有b8
 	if offset >= s.offset {
@@ -353,11 +352,9 @@ func (s *Msearch) get(offset int) ([]string, int) {
 	return list, lastDec
 }
 
-// bigUint64 对大数字进行解码， binary.BigEndian.PutUint64 是编码.
+// bigUint64 对大数字进行解码 长度为0-8位的字节切片. binary.BigEndian.PutUint64 是编码.
 func bigUint64(buf []byte) int {
 	if len(buf) > 8 {
-		// 内部使用方法，不应该出现如此错误。
-		fmt.Println(buf, "error: 长度超过8位. len(buf)==>", len(buf))
 		return 0
 	}
 	var x int
