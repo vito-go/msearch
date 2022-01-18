@@ -17,7 +17,7 @@ import (
 const notExist = -1
 
 // DefaultLength 默认映射空间大小 32GB，不影响实际内存大小。
-const DefaultLength = 32 << 30
+const DefaultLength = 128 << 30
 
 type Msearch struct {
 	mu        sync.RWMutex // to protect the follow fields
@@ -27,6 +27,9 @@ type Msearch struct {
 	bytesAddr []byte
 }
 
+// NewMsearch 新建一个msearch实例. file为底层文件路径。
+// length为映射至内存大小(不影响实际内存占用)，
+// 小于等于0或则默认为32GB.
 func NewMsearch(file string, length int) (*Msearch, error) {
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
