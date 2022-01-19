@@ -16,8 +16,8 @@ import (
 // notExist 标记不存在的key.
 const notExist = -1
 
-// DefaultLength 默认映射空间大小 32GB，不影响实际内存大小。
-const DefaultLength = 128 << 30
+// DefaultLength 默认映射空间大小 64 GB，不影响实际内存大小。
+const DefaultLength = 64 << 30
 
 type Msearch struct {
 	mu        sync.RWMutex // to protect the follow fields
