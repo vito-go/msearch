@@ -19,17 +19,21 @@ const notExist = -1
 // DefaultLength 默认映射空间大小 64 GB，不影响实际内存大小。
 const DefaultLength = 64 << 30
 
+// Msearch  It's safe for concurrent use by multiple goroutines.
 type Msearch struct {
-	mu        sync.RWMutex // to protect the follow fields
-	f         *os.File
-	offset    int
-	keyMap    map[string]int
-	bytesAddr []byte
+	mu sync.RWMutex // mu to protect the follow fields
+	f  *os.File     // After the syscall.Mmap() call has returned, the file descriptor, fd, can be closed immediately
+	// without invalidating the mapping. But after f.Close(), we can't write any data to the file.
+	// So, the f should not call Close().
+	offset    int            // last offset of the f
+	keyMap    map[string]int // store all keys, value is the offset in bytesAddr of every key
+	bytesAddr []byte         // bytesAddr is the virtual address space of the process
 }
 
-// NewMsearch 新建一个msearch实例. file为底层文件路径。
-// length为映射至内存大小(不影响实际内存占用)，
-// 小于等于0或则默认为32GB.
+// NewMsearch create a new Msearch by file and length。
+// file is the path of the underlying file.
+// the length argument specifies the length of the mapping (which must be greater than 0)
+// it has no impact on the real memory. the default value is 64GB.
 func NewMsearch(file string, length int) (*Msearch, error) {
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
@@ -52,21 +56,21 @@ func NewMsearch(file string, length int) (*Msearch, error) {
 	}, nil
 }
 
-// Get 查询.
+// Get one or more value.
 func (s *Msearch) Get(key string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.gets(key)
 }
 
-// Add 增加.
+// Add one or more value.
 func (s *Msearch) Add(key string, values ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.adds(key, values...)
 }
 
-// Del 删除.
+// Del one or more value.
 func (s *Msearch) Del(key string, values ...string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -90,6 +94,16 @@ func (s *Msearch) Update(key string, values ...string) error {
 	return err
 }
 
+func (s *Msearch) Exist(key string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.keyMap[key]
+	if ok {
+		return true
+	}
+	s.keyMap[key] = notExist
+	return false
+}
 func (s *Msearch) delsPrefix(key string, values ...string) {
 	offset, ok := s.keyMap[key]
 	if !ok {
@@ -146,16 +160,6 @@ func (s *Msearch) gets(key string) []string {
 		offset = d
 	}
 	return lists
-}
-func (s *Msearch) Exist(key string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	_, ok := s.keyMap[key]
-	if ok {
-		return true
-	}
-	s.keyMap[key] = notExist
-	return false
 }
 
 // empty 插入判断是否有空位，以及空位的长度.
