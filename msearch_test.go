@@ -47,11 +47,11 @@ func TestNewMsearch(t *testing.T) {
 func BenchmarkNewMsearch(b *testing.B) {
 	user := "example@example.com"
 	friends := []string{
-		// "abc429298@example.com", "abc429297@example.com", "abc429296@example.com", "abc429295@example.com", "abc429294@example.com",
-		// "abc429293@example.com", "abc429292@example.com", "abc429291@example.com", "abc429290@example.com", "abc429289@example.com",
-		// "abc429288@example.com", "abc429287@example.com", "abc429286@example.com", "abc429285@example.com", "abc429284@example.com",
-		// "abc429283@example.com", "abc429282@example.com", "abc429281@example.com", "abc429280@example.com", "abc429279@example.com",
-		// "abc429278@example.com", "abc429277@example.com", "abc429276@example.com", "abc429275@example.com", "abc429274@example.com",
+		"abc429298@example.com", "abc429297@example.com", "abc429296@example.com", "abc429295@example.com", "abc429294@example.com",
+		"abc429293@example.com", "abc429292@example.com", "abc429291@example.com", "abc429290@example.com", "abc429289@example.com",
+		"abc429288@example.com", "abc429287@example.com", "abc429286@example.com", "abc429285@example.com", "abc429284@example.com",
+		"abc429283@example.com", "abc429282@example.com", "abc429281@example.com", "abc429280@example.com", "abc429279@example.com",
+		"abc429278@example.com", "abc429277@example.com", "abc429276@example.com", "abc429275@example.com", "abc429274@example.com",
 		"abc429273@example.com", "abc429272@example.com", "abc429271@example.com", "abc429270@example.com", "abc429269@example.com"}
 
 	fileName := "test.msearch"

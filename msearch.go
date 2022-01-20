@@ -97,8 +97,7 @@ func (s *Msearch) Update(key string, values ...string) error {
 func (s *Msearch) Exist(key string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	_, ok := s.keyMap[key]
-	if ok {
+	if offset, ok := s.keyMap[key];ok&&offset!=notExist{
 		return true
 	}
 	s.keyMap[key] = notExist
