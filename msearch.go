@@ -1,6 +1,6 @@
 // Package msearch  基于mmap技术的，以本地文件为基础的搜索技术。提供增加、删、查（简单的替代mysql。）
-// 单个 value 长度不能超过255. // todo if needed?
-// [_8(total) _1 key  _1(len) xxx _1(len) xxx  _8(next) _8(overflow offset)]
+// 单个 value 长度不能超过255. // TODO if needed?
+// [_8(total) _1 key  _1(len) xxx _1(len) xxx  _8(overflow offset)]
 
 package msearch
 
@@ -48,7 +48,7 @@ func NewMsearch(file string, length int) (*Msearch, error) {
 	if err != nil {
 		return nil, err
 	}
-	if length <= 0 {
+	if length <= DefaultLength {
 		length = DefaultLength
 	}
 	// 追加用f.Write 读取和修改用MMap
@@ -86,23 +86,24 @@ func (s *Msearch) Del(key string, values ...string) {
 	s.dels(key, values...)
 }
 
-// DelByPrefix 根据前缀删除.
+// DelByPrefix delete values by prefix.
 func (s *Msearch) DelByPrefix(key string, values ...string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.delsPrefix(key, values...)
 }
 
-// Update 更新。先删除所有老数据，然后更新新数据.
-func (s *Msearch) Update(key string, values ...string) error {
+// Update will delete all the old values of key and set it to the newValues.
+func (s *Msearch) Update(key string, newValues ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	oldValues := s.gets(key)
 	s.dels(key, oldValues...)
-	err := s.adds(key, values...)
+	err := s.adds(key, newValues...)
 	return err
 }
 
+// Exist check the key whether exists.
 func (s *Msearch) Exist(key string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -112,6 +113,7 @@ func (s *Msearch) Exist(key string) bool {
 	s.keyMap[key] = notExist
 	return false
 }
+
 func (s *Msearch) delsPrefix(key string, values ...string) {
 	offset, ok := s.keyMap[key]
 	if !ok {
@@ -203,7 +205,7 @@ func (s *Msearch) empty1(offset int) (o int, lastDec int, start int, end int, t 
 	total := bigUint64(s.bytesAddr[offset : offset+8])
 	b := s.bytesAddr[offset : offset+total]
 	o = offset
-	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-16]); {
+	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-8]); {
 		if b[i] == 0 {
 			if !first {
 				first = true
@@ -220,7 +222,7 @@ func (s *Msearch) empty1(offset int) (o int, lastDec int, start int, end int, t 
 		i += int(b[i]) + 1
 	}
 	if t && end == 0 {
-		end = total - 16
+		end = total - 8
 	}
 	lastDec = bigUint64(b[total-8 : total])
 	return
@@ -257,8 +259,8 @@ func (s *Msearch) add(b8 []byte, key string, values ...string) (int, error) {
 		copy(b[idx+1:], value)
 		idx += 1 + len(value)
 	}
-	total := idx + 16
-	binary.BigEndian.PutUint64(b[idx:], uint64(total+s.offset)) // todo 是否有必要？？
+	total := idx + 8
+	// binary.BigEndian.PutUint64(b[idx:], uint64(total+s.offset)) // todo 是否有必要？？
 	b = b[:total]
 	binary.BigEndian.PutUint64(b[:8], uint64(total))
 	_, err := s.f.Write(b)
@@ -310,7 +312,7 @@ func (s *Msearch) del(offset int, valueMap map[string]struct{}) int {
 		return 0
 	}
 	b := s.bytesAddr[offset : offset+total]
-	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-16]); {
+	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-8]); {
 		bi := int(b[i])
 		if bi == 0 {
 			i++
@@ -332,7 +334,7 @@ func (s *Msearch) delPrefix(offset int, values ...string) int {
 		return 0
 	}
 	b := s.bytesAddr[offset : offset+total]
-	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-16]); {
+	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-8]); {
 		bi := int(b[i])
 		if bi == 0 {
 			i++
@@ -355,7 +357,7 @@ func (s *Msearch) get(offset int) ([]string, int) {
 	total := bigUint64(s.bytesAddr[offset : offset+8])
 	b := s.bytesAddr[offset : offset+total]
 	var list []string
-	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-16]); {
+	for i := int(b[8] + 1 + 8); i < len(b[:len(b)-8]); {
 		if b[i] == 0 {
 			i++
 			continue
@@ -368,6 +370,7 @@ func (s *Msearch) get(offset int) ([]string, int) {
 }
 
 // bigUint64 对大数字进行解码 长度为0-8位的字节切片. binary.BigEndian.PutUint64 是编码.
+// Deprecated: please use binary.BigEndian.Uint64
 func bigUint64(buf []byte) int {
 	if len(buf) > 8 {
 		return 0
