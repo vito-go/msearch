@@ -13,11 +13,20 @@ import (
 	"syscall"
 )
 
-// notExist 标记不存在的key.
+// notExist 标记不存在的key. // TODO 好像这个标记没什么用
 const notExist = -1
 
 // DefaultLength 默认映射空间大小 64 GB，不影响实际内存大小。
 const DefaultLength = 64 << 30
+
+type MSearcher interface {
+	Add(key string, values ...string) error
+	Del(key string, values ...string)
+	Get(key string) []string
+	DelByPrefix(key string, values ...string)
+	Update(key string, values ...string) error
+	Exist(key string) bool
+}
 
 // Msearch  It's safe for concurrent use by multiple goroutines.
 type Msearch struct {
@@ -97,7 +106,7 @@ func (s *Msearch) Update(key string, values ...string) error {
 func (s *Msearch) Exist(key string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if offset, ok := s.keyMap[key];ok&&offset!=notExist{
+	if offset, ok := s.keyMap[key]; ok && offset != notExist {
 		return true
 	}
 	s.keyMap[key] = notExist
