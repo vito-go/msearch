@@ -1,3 +1,5 @@
+//go:build !windows
+
 // Package msearch  基于mmap技术的，以本地文件为基础的搜索技术。提供增加、删、查（简单的替代mysql。）
 // 单个 value 长度不能超过255. // TODO if needed?
 // [_8(total) _1 key  _1(len) xxx _1(len) xxx  _8(overflow offset)]
